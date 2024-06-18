@@ -1,5 +1,5 @@
 CC = gcc
-F90 = gfortran 
+F90 = mpifort
 
 all: syn_1d install
 

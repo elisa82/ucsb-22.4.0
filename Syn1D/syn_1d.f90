@@ -21,6 +21,7 @@ Program syn_1d
 !======================================================================
  use source_params
  use station_params
+ use mpi
  implicit NONE
  character(len=72):: fileinp,fsou_list,filesour,fileRec,file_gf_info
  character(len=72):: st_name,fout1,fout2,fout3,ch1,ch2,ch3
@@ -28,6 +29,11 @@ Program syn_1d
  character(len=6), dimension(4):: chformat
  integer:: npsx,npsy,getlen,id_motion,id_format,nsrc_model,ism,ks,lc
  real:: tdura,azimu_p,rake_p,dip_p,freq_b,freq_e,rdp,kap
+ integer :: myid,ierr, numprocs
+
+ call MPI_INIT( ierr )
+ call MPI_COMM_RANK( MPI_COMM_WORLD, myid, ierr )
+ call MPI_COMM_SIZE( MPI_COMM_WORLD, numprocs, ierr )
 !
  chmotion=(/ 'Displ ','Veloc ','Accel ' /)
  chformat=(/ 'SAC   ','TXT   ','FXDR  ','Binary' /)
@@ -99,7 +105,8 @@ Program syn_1d
  do ism=1,nsrc_model
    read(21,'(1a)') filesour
    call input_source_param(filesour,npsx,npsy)
-   do ks=1,nst
+   do ks=myid+1,nst,numprocs
+     write(*,*) 'rank ',myid, 'site',ks,'of',nst
      st_x_n=stan_x(ks)
      st_y_e=stan_y(ks)
      st_z_up=stan_z(ks)
@@ -130,6 +137,7 @@ Program syn_1d
    enddo  ! end loop of stations (ks)
  enddo  ! end loop of source model (ism)
  close(21)
+ call MPI_FINALIZE(ierr)
  stop
 end program syn_1d
 !
@@ -865,6 +873,7 @@ subroutine output3(tmfile,id_format,nump,dt,velc)
 
  else if(id_format == 2) then
 !  TXT
+   write(*,*) "dumping ",tmfile
    open(19, file=tmfile, status='unknown', position='rewind')
    write(19,*) nump,dt
    write(19,925) (velc(j), j=1,nump)
